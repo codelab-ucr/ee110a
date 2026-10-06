@@ -1,0 +1,145 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>EE110A: Signals and Systems | University of California Riverside | Prof. Vishwanath Saragadam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: short intro header, then a numbered list of applets in course order (one row per applet with a small preview plot) */
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --ink: #18212b;
+  --muted: #5a6877;
+  --line: #d9dfe6;
+  --grid: #e9edf2;
+  --axis: #7d8a98;
+  --orig: #1d5fa8;
+  --xf: #c9481b;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --panel: #182029; --ink: #e6ebf0; --muted: #9aa7b5; --line: #2a3542;
+    --grid: #202a35; --axis: #6f7e8e; --orig: #6aa8f0; --xf: #f08a5d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --panel: #182029; --ink: #e6ebf0; --muted: #9aa7b5; --line: #2a3542;
+  --grid: #202a35; --axis: #6f7e8e; --orig: #6aa8f0; --xf: #f08a5d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 920px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 56px; display: flex; flex-direction: column; gap: 28px; }
+
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.top > div:first-child { flex: 1 1 360px; min-width: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.8rem; color: var(--xf); letter-spacing: 0.04em; margin: 0 0 6px; }
+h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 2.4rem); line-height: 1.15; text-wrap: balance; }
+.lede { margin: 10px 0 0; color: var(--muted); max-width: 62ch; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); flex: none; }
+.seg button { font: inherit; font-size: 0.9rem; color: var(--ink); background: transparent; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+:focus-visible { outline: 2px solid var(--orig); outline-offset: 2px; }
+
+.list-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.list-head h2 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.list-head span { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+ol.applets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.card { display: grid; grid-template-columns: 3.2rem 1fr 200px; gap: 18px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; color: inherit; text-decoration: none; transition: border-color .15s, transform .15s; }
+.card:hover { border-color: var(--xf); transform: translateY(-1px); }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
+.num { font-family: var(--font-mono); font-size: 1.6rem; color: var(--xf); font-variant-numeric: tabular-nums; align-self: start; }
+.body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.body h3 { margin: 0; font-size: 1.2rem; }
+.body p { margin: 0; color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-family: var(--font-mono); font-size: 0.78rem; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--ink); }
+.go { font-weight: 700; color: var(--xf); font-size: 0.92rem; }
+.thumb { width: 100%; max-width: 100%; height: auto; display: block; }
+@media (max-width: 640px) {
+  .card { grid-template-columns: 2.4rem 1fr; }
+  .thumb { grid-column: 1 / -1; max-width: 320px; }
+}
+footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">x(t) → y(t)</p>
+      <h1>EE110A: Signals and Systems | University of California Riverside | Prof. Vishwanath Saragadam</h1>
+      <p class="lede">Interactive tools for exploring core ideas in signals and systems. Each applet helps you understand the basics of signals and systems.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Color theme">
+      <button data-th="system" aria-pressed="true">System</button>
+      <button data-th="light" aria-pressed="false">Light</button>
+      <button data-th="dark" aria-pressed="false">Dark</button>
+    </div>
+  </header>
+
+  <section>
+    <div class="list-head"><h2>Applets</h2><span id="count"></span></div>
+    <ol class="applets" id="list" style="margin-top:14px"></ol>
+  </section>
+
+  <footer>Each applet opens in a new tab. Email vishwanath.saragadam@ucr.edu if you find any errors.</footer>
+</div>
+
+<script>
+(() => {
+  // Add new applets here, in course order.
+  const APPLETS = [
+    {
+      title: "Basic Signal Transformations",
+      desc: "Shift, reverse, and scale basic signals. Compare the original and transformed plots, and step through the operations in different orders.",
+      tags: ["u(t)", "r(t)", "x(at + b)"],
+      url: "basic_transformations.html",
+      thumb: "transform",
+    },
+  ];
+
+  // Small preview: box x(t) and its transform x(-2(t-1))
+  function thumb() {
+    const W = 200, H = 110, X = t => 10 + (t + 2.5) / 5 * (W - 20), Y = v => H - 22 - v * 60;
+    let g = "";
+    for (let t = -2; t <= 2; t++) g += `<line x1="${X(t)}" y1="10" x2="${X(t)}" y2="${H - 22}" stroke="var(--grid)"/>`;
+    return `<svg class="thumb" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+      ${g}
+      <line x1="10" y1="${Y(0)}" x2="${W - 10}" y2="${Y(0)}" stroke="var(--axis)"/>
+      <line x1="${X(0)}" y1="10" x2="${X(0)}" y2="${H - 22}" stroke="var(--axis)"/>
+      <polyline fill="none" stroke="var(--orig)" stroke-width="2" stroke-dasharray="5 4"
+        points="${X(-2.5)},${Y(0)} ${X(0)},${Y(0)} ${X(0)},${Y(1)} ${X(1)},${Y(1)} ${X(1)},${Y(0)} ${X(2.5)},${Y(0)}"/>
+      <polyline fill="none" stroke="var(--xf)" stroke-width="2.6"
+        points="${X(-2.5)},${Y(0)} ${X(0.5)},${Y(0)} ${X(0.5)},${Y(1)} ${X(1)},${Y(1)} ${X(1)},${Y(0)} ${X(2.5)},${Y(0)}"/>
+      ${[-2, -1, 0, 1, 2].map(t => `<text x="${X(t)}" y="${H - 6}" text-anchor="middle" font-size="10" font-family="IBM Plex Mono, monospace" fill="var(--muted)">${t}</text>`).join("")}
+    </svg>`;
+  }
+
+  const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  document.getElementById("list").innerHTML = APPLETS.map((a, i) => `
+    <li><a class="card" href="${a.url}" target="_blank" rel="noopener">
+      <span class="num">${String(i + 1).padStart(2, "0")}</span>
+      <div class="body">
+        <h3>${esc(a.title)}</h3>
+        <p>${esc(a.desc)}</p>
+        <div class="tags">${a.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+        <span class="go">Open applet →</span>
+      </div>
+      ${a.thumb === "transform" ? thumb() : ""}
+    </a></li>`).join("");
+  document.getElementById("count").textContent = APPLETS.length + (APPLETS.length === 1 ? " applet" : " applets");
+
+  function applyTheme(th) {
+    const r = document.documentElement;
+    if (th === "system") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", th);
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.th === th)));
+    try { localStorage.setItem("sig-theme", th); } catch (e) {}
+  }
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => applyTheme(b.dataset.th)));
+  try { const s = localStorage.getItem("sig-theme"); if (s) applyTheme(s); } catch (e) {}
+})();
+</script>
+
+</body></html>

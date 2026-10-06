@@ -1,0 +1,392 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Basic Signal Transformations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control strip on top, two equal plot panels (original | transformed) that stack on phones; graph-paper engineering feel */
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --ink: #18212b;
+  --muted: #5a6877;
+  --line: #d9dfe6;
+  --grid: #e9edf2;
+  --axis: #7d8a98;
+  --orig: #1d5fa8;
+  --xf: #c9481b;
+  --ghost: #9aa7b5;
+  --accent-soft: #fbe9e1;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --panel: #182029; --ink: #e6ebf0; --muted: #9aa7b5; --line: #2a3542;
+    --grid: #202a35; --axis: #6f7e8e; --orig: #6aa8f0; --xf: #f08a5d; --ghost: #5d6b7a;
+    --accent-soft: #3a2219; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --panel: #182029; --ink: #e6ebf0; --muted: #9aa7b5; --line: #2a3542;
+  --grid: #202a35; --axis: #6f7e8e; --orig: #6aa8f0; --xf: #f08a5d; --ghost: #5d6b7a;
+  --accent-soft: #3a2219; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 24px 40px; display: flex; flex-direction: column; gap: 18px; }
+header h1 { margin: 0; font-size: 1.6rem; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; }
+.ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ctl label, .lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+.row { display: flex; align-items: center; gap: 10px; }
+select, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; }
+select { width: 100%; }
+button { cursor: pointer; }
+button:hover { border-color: var(--axis); }
+:focus-visible { outline: 2px solid var(--orig); outline-offset: 2px; }
+input[type=range] { flex: 1; min-width: 0; accent-color: var(--xf); }
+.val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 4.5ch; text-align: right; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 7px 14px; }
+.seg button[aria-pressed="true"] { background: var(--xf); color: #fff; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+
+.eq { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: baseline; }
+.eq .main { font-family: var(--font-mono); font-size: 1.15rem; }
+.eq .alt, .eq .maps { font-family: var(--font-mono); color: var(--muted); font-size: 0.92rem; }
+.eq .x { color: var(--xf); font-weight: 500; }
+
+.plots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .plots { grid-template-columns: 1fr; } }
+.plot { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 8px; min-width: 0; }
+.plot h2 { margin: 0 0 6px; font-size: 1rem; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.plot h2 .fn { font-family: var(--font-mono); font-weight: 500; }
+.plot.o h2 .fn { color: var(--orig); }
+.plot.t h2 .fn { color: var(--xf); }
+canvas { width: 100%; aspect-ratio: 4 / 3; max-width: 100%; display: block; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); padding: 4px 4px 0; }
+.sw { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.note { font-size: 0.88rem; color: var(--muted); max-width: 80ch; margin: 0; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 20px; flex-wrap: wrap; }
+.top > div:first-child { min-width: 0; flex: 1 1 320px; }
+.theme { background: var(--panel); flex: none; }
+.theme button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.seq { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 22px; }
+.seq > h2 { margin: 0; font-size: 1.15rem; }
+.seq > p { margin: -14px 0 0; color: var(--muted); font-size: 0.9rem; max-width: 80ch; }
+.order h3 { margin: 0 0 10px; font-size: 1rem; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.order h3 .tag { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.step { border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 4px; min-width: 0; background: var(--bg); }
+.step .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+.step .op { font-size: 0.88rem; min-height: 2.6em; }
+.step .ex { font-family: var(--font-mono); font-size: 0.85rem; color: var(--xf); overflow-wrap: anywhere; }
+.step.first .ex { color: var(--orig); }
+.step.skip { opacity: 0.55; }
+.step canvas { aspect-ratio: 4 / 3; }
+.ok { font-size: 0.78rem; font-weight: 700; color: var(--xf); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; align-self: flex-start; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Basic Signal Transformations</h1>
+      <p>Pick a signal x(t), then shift, reverse, and scale it. The original is on the left; the transformed signal y(t) is on the right.</p>
+    </div>
+    <div class="seg theme" role="group" aria-label="Color theme">
+      <button id="thSys" data-th="system" aria-pressed="true">System</button>
+      <button id="thLight" data-th="light" aria-pressed="false">Light</button>
+      <button id="thDark" data-th="dark" aria-pressed="false">Dark</button>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="ctl">
+      <label for="sig">Signal x(t)</label>
+      <select id="sig">
+        <option value="step">Unit step u(t)</option>
+        <option value="ramp">Ramp r(t) = t·u(t)</option>
+        <option value="tramp">Time-limited ramp (0 ≤ t &lt; 1)</option>
+        <option value="box">Box (0 ≤ t &lt; 1)</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label for="shift">Time shift t₀</label>
+      <div class="row"><input id="shift" type="range" min="-4" max="4" step="0.25" value="1"><span class="val" id="shiftV"></span></div>
+    </div>
+    <div class="ctl">
+      <label for="scale">Time scale a</label>
+      <div class="row"><input id="scale" type="range" min="0.25" max="4" step="0.25" value="2"><span class="val" id="scaleV"></span></div>
+    </div>
+    <div class="ctl">
+      <span class="lbl" id="revL">Time reversal</span>
+      <div class="row" style="justify-content: space-between; flex-wrap: wrap;">
+        <div class="seg" role="group" aria-labelledby="revL">
+          <button id="revOff" aria-pressed="true">Off</button>
+          <button id="revOn" aria-pressed="false">On</button>
+        </div>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Overlays</span>
+      <label class="check" style="text-transform:none;letter-spacing:0;font-weight:400;font-size:0.95rem;color:var(--ink)"><input type="checkbox" id="ghost" checked> Original (faint)</label>
+      <label class="check" style="text-transform:none;letter-spacing:0;font-weight:400;font-size:0.95rem;color:var(--ink)"><input type="checkbox" id="mid"> Before shift: x(±a·t)</label>
+    </div>
+  </section>
+
+  <section class="eq" aria-live="polite">
+    <span class="main" id="eqMain"></span>
+    <span class="alt" id="eqAlt"></span>
+    <span class="maps" id="eqMaps"></span>
+  </section>
+
+  <section class="plots">
+    <div class="plot o">
+      <h2><span>Original</span><span class="fn" id="lblO">x(t)</span></h2>
+      <canvas id="cO" aria-label="Plot of original signal"></canvas>
+    </div>
+    <div class="plot t">
+      <h2><span>Transformed</span><span class="fn" id="lblT">y(t)</span></h2>
+      <canvas id="cT" aria-label="Plot of transformed signal"></canvas>
+      <div class="legend">
+        <span><span class="sw" style="border-color:var(--xf)"></span>y(t)</span>
+        <span id="lgG"><span class="sw" style="border-color:var(--ghost);border-top-style:dashed"></span>x(t)</span>
+        <span id="lgM" hidden><span class="sw" style="border-color:var(--orig);border-top-style:dotted"></span>before shift</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">Convention: y(t) = x(±a(t − t₀)). Scale and reverse about t = 0 first, then shift right by t₀. Toggle “Before shift” to see the intermediate step.</p>
+
+  <section class="seq" aria-label="Sequence of operations">
+    <h2>Different approaches to perform transformations</h2>
+    <p>Each step replaces t in the previous expression. Both orders end at the same y(t), but the shift amount changes with the order.</p>
+    <div class="order">
+      <h3>Order A: shift → scale → flip <span class="tag" id="tagA"></span></h3>
+      <div class="steps" id="stepsA"></div>
+    </div>
+    <div class="order">
+      <h3>Order B: scale → shift → flip <span class="tag" id="tagB"></span></h3>
+      <div class="steps" id="stepsB"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const SIG = {
+    step:  { f: t => t >= 0 ? 1 : 0, name: "u(t)", pts: [0], y: [-0.4, 1.6], yt: [0, 0.5, 1, 1.5] },
+    ramp:  { f: t => t >= 0 ? t : 0, name: "r(t)", pts: [0], y: [-0.6, 5], yt: [0, 1, 2, 3, 4, 5] },
+    tramp: { f: t => (t >= 0 && t < 1) ? t : 0, name: "x(t)", pts: [0, 1], y: [-0.4, 1.6], yt: [0, 0.5, 1, 1.5] },
+    box:   { f: t => (t >= 0 && t < 1) ? 1 : 0, name: "x(t)", pts: [0, 1], y: [-0.4, 1.6], yt: [0, 0.5, 1, 1.5] },
+  };
+  const T0 = -5, T1 = 5;
+  const $ = id => document.getElementById(id);
+  const st = { sig: "box", shift: 1, scale: 2, rev: false };
+
+  const fmt = v => {
+    const s = (+v.toFixed(3)).toString();
+    return s;
+  };
+  const fmtSigned = v => v < 0 ? "− " + fmt(-v) : "+ " + fmt(v);
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function setupCanvas(c) {
+    const dpr = window.devicePixelRatio || 1;
+    const r = c.getBoundingClientRect();
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w: r.width, h: r.height };
+  }
+
+  function drawPlot(c, sig, curves, marks) {
+    const { ctx, w, h } = setupCanvas(c);
+    const pad = { l: 34, r: 10, t: 10, b: 26 };
+    const [y0, y1] = sig.y;
+    const X = t => pad.l + (t - T0) / (T1 - T0) * (w - pad.l - pad.r);
+    const Y = v => pad.t + (y1 - v) / (y1 - y0) * (h - pad.t - pad.b);
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = "11px " + css("--font-mono");
+    // grid
+    ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+    for (let t = T0; t <= T1; t += 0.5) { ctx.beginPath(); ctx.moveTo(X(t), pad.t); ctx.lineTo(X(t), h - pad.b); ctx.stroke(); }
+    sig.yt.forEach(v => { ctx.beginPath(); ctx.moveTo(pad.l, Y(v)); ctx.lineTo(w - pad.r, Y(v)); ctx.stroke(); });
+    // axes
+    ctx.strokeStyle = css("--axis"); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(pad.l, Y(0)); ctx.lineTo(w - pad.r, Y(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(0), pad.t); ctx.lineTo(X(0), h - pad.b); ctx.stroke();
+    ctx.fillStyle = css("--muted");
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    const lblStep = w < 280 ? 2 : 1;
+    for (let t = T0; t <= T1; t += lblStep) ctx.fillText(t, X(t), h - pad.b + 6);
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    sig.yt.forEach(v => { if (v !== 0) ctx.fillText(v, pad.l - 5, Y(v)); });
+    ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+    ctx.fillText("t", w - pad.r, Y(0) - 3);
+
+    // clip to plot area
+    ctx.save(); ctx.beginPath(); ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b); ctx.clip();
+    curves.forEach(cv => {
+      const N = 2400, jumpTol = 0.08 * (y1 - y0);
+      ctx.strokeStyle = cv.color; ctx.lineWidth = cv.width; ctx.setLineDash(cv.dash || []);
+      ctx.lineJoin = "round";
+      let prev = null;
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) {
+        const t = T0 + (T1 - T0) * i / N, v = cv.f(t);
+        if (prev && Math.abs(v - prev.v) > jumpTol && Math.abs(v - prev.v) / ((T1 - T0) / N) > 40) {
+          ctx.stroke();
+          // jump connector
+          ctx.save(); ctx.setLineDash([3, 3]); ctx.lineWidth = 1; ctx.globalAlpha = 0.7;
+          ctx.beginPath(); ctx.moveTo(X(t), Y(prev.v)); ctx.lineTo(X(t), Y(v)); ctx.stroke(); ctx.restore();
+          ctx.setLineDash(cv.dash || []); ctx.lineWidth = cv.width;
+          ctx.beginPath(); ctx.moveTo(X(t), Y(v));
+        } else if (i === 0) ctx.moveTo(X(t), Y(v));
+        else ctx.lineTo(X(t), Y(v));
+        prev = { v };
+      }
+      ctx.stroke();
+    });
+    ctx.restore(); ctx.setLineDash([]);
+
+    // breakpoint markers
+    (marks || []).forEach(m => {
+      if (m.t < T0 || m.t > T1) return;
+      ctx.fillStyle = m.color;
+      ctx.beginPath(); ctx.arc(X(m.t), Y(0), 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.font = "500 11px " + css("--font-mono");
+      ctx.fillText(m.label, X(m.t), Y(0) - 6);
+    });
+  }
+
+  function render() {
+    const sig = SIG[st.sig];
+    const a = st.scale, t0 = st.shift, s = st.rev ? -1 : 1;
+    const y = t => sig.f(s * a * (t - t0));
+    const mid = t => sig.f(s * a * t);
+
+    $("shiftV").textContent = fmt(t0);
+    $("scaleV").textContent = fmt(a);
+    $("revOff").setAttribute("aria-pressed", String(!st.rev));
+    $("revOn").setAttribute("aria-pressed", String(st.rev));
+
+    const pre = (s < 0 ? "−" : "") + (a === 1 ? "" : fmt(a));
+    const inner = t0 === 0 ? (pre === "" ? "t" : pre + "t") :
+      (pre === "" ? `t ${fmtSigned(-t0)}` : `${pre}(t ${fmtSigned(-t0)})`);
+    $("eqMain").innerHTML = `y(t) = x(<span class="x">${inner}</span>)`;
+    const alpha = s * a, beta = -s * a * t0;
+    const altInner = (alpha === 1 ? "t" : alpha === -1 ? "−t" : (alpha < 0 ? "−" : "") + fmt(Math.abs(alpha)) + "t") + (beta === 0 ? "" : " " + fmtSigned(beta));
+    $("eqAlt").textContent = `= x(${altInner})`;
+    const maps = sig.pts.map(p => `x's t=${p} → y's t=${fmt(t0 + p / (s * a))}`);
+    $("eqMaps").textContent = maps.join("   ");
+    $("lblO").textContent = sig.name;
+    $("lblT").textContent = `x(${inner})`;
+
+    const cOrig = css("--orig"), cX = css("--xf"), cG = css("--ghost");
+    drawPlot($("cO"), sig, [{ f: sig.f, color: cOrig, width: 2.5 }],
+      sig.pts.map(p => ({ t: p, label: "t=" + p, color: cOrig })));
+
+    const curves = [];
+    if ($("ghost").checked) curves.push({ f: sig.f, color: cG, width: 1.5, dash: [6, 4] });
+    if ($("mid").checked) curves.push({ f: mid, color: cOrig, width: 1.6, dash: [2, 3] });
+    curves.push({ f: y, color: cX, width: 2.8 });
+    $("lgG").hidden = !$("ghost").checked;
+    $("lgM").hidden = !$("mid").checked;
+    drawPlot($("cT"), sig, curves,
+      sig.pts.map(p => ({ t: t0 + p / (s * a), label: "t=" + fmt(t0 + p / (s * a)), color: cX })));
+
+    renderSeq(sig, a, t0, s, cOrig, cX);
+  }
+
+  // x(αt + β) as text
+  function lin(al, be) {
+    const ap = al === 1 ? "t" : al === -1 ? "−t" : (al < 0 ? "−" : "") + fmt(Math.abs(al)) + "t";
+    return `x(${ap}${be === 0 ? "" : " " + fmtSigned(be)})`;
+  }
+  function shiftText(d) {
+    if (d === 0) return { op: "No shift (amount is 0)", sub: "" };
+    return { op: `Shift ${d > 0 ? "right" : "left"} by ${fmt(Math.abs(d))}`, sub: `t → t ${fmtSigned(-d)}` };
+  }
+  function scaleText(a) {
+    if (a === 1) return { op: "No scaling (a = 1)", sub: "" };
+    return { op: `${a > 1 ? "Compress" : "Stretch"} about t = 0`, sub: `t → ${fmt(a)}t` };
+  }
+  function flipText(s) {
+    return s < 0 ? { op: "Flip about t = 0", sub: "t → −t" } : { op: "No flip (reversal off)", sub: "" };
+  }
+
+  function renderSeq(sig, a, t0, s, cOrig, cX) {
+    const beta = -s * a * t0;
+    const A = [
+      { k: "Start", txt: { op: "Original signal", sub: "" }, al: 1, be: 0, first: true },
+      { k: "1 · Shift", txt: shiftText(-beta), al: 1, be: beta, skip: beta === 0 },
+      { k: "2 · Scale", txt: scaleText(a), al: a, be: beta, skip: a === 1 },
+      { k: "3 · Flip", txt: flipText(s), al: s * a, be: beta, skip: s > 0, last: true },
+    ];
+    const c = beta / a; // shift t → t + c
+    const B = [
+      { k: "Start", txt: { op: "Original signal", sub: "" }, al: 1, be: 0, first: true },
+      { k: "1 · Scale", txt: scaleText(a), al: a, be: 0, skip: a === 1 },
+      { k: "2 · Shift", txt: shiftText(-c), al: a, be: beta, skip: c === 0 },
+      { k: "3 · Flip", txt: flipText(s), al: s * a, be: beta, skip: s > 0, last: true },
+    ];
+    const neg = s < 0 ? "−" : "";
+    $("tagA").textContent = `shift amount = ${neg}a·t₀ = ${fmt(-beta)}`;
+    $("tagB").textContent = `shift amount = ${neg}t₀ = ${fmt(-c)}`;
+    [["stepsA", A], ["stepsB", B]].forEach(([id, stages]) => {
+      const host = $(id);
+      host.innerHTML = stages.map((g, i) => `
+        <div class="step${g.first ? " first" : ""}${g.skip ? " skip" : ""}">
+          <span class="k">${g.k}</span>
+          <span class="op">${g.txt.op}${g.txt.sub ? `<br><span style="font-family:var(--font-mono);color:var(--muted)">${g.txt.sub}</span>` : ""}</span>
+          <span class="ex">${lin(g.al, g.be)}</span>
+          <canvas aria-label="${g.k}: ${lin(g.al, g.be)}"></canvas>
+          ${g.last ? `<span class="ok">= y(t)</span>` : ""}
+        </div>`).join("");
+      host.querySelectorAll("canvas").forEach((cv, i) => {
+        const g = stages[i], col = g.first ? cOrig : cX;
+        drawPlot(cv, sig, [{ f: t => sig.f(g.al * t + g.be), color: col, width: 2.2 }],
+          sig.pts.map(p => { const tt = (p - g.be) / g.al; return { t: tt, label: fmt(tt), color: col }; }));
+      });
+    });
+  }
+
+  // theme toggle
+  function applyTheme(th) {
+    const r = document.documentElement;
+    if (th === "system") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", th);
+    document.querySelectorAll(".theme button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.th === th)));
+    try { localStorage.setItem("sig-theme", th); } catch (e) {}
+  }
+  document.querySelectorAll(".theme button").forEach(b => b.addEventListener("click", () => applyTheme(b.dataset.th)));
+  try { const saved = localStorage.getItem("sig-theme"); if (saved) applyTheme(saved); } catch (e) {}
+
+
+  $("sig").value = st.sig;
+  $("sig").addEventListener("change", e => { st.sig = e.target.value; render(); });
+  $("shift").addEventListener("input", e => { st.shift = +e.target.value; render(); });
+  $("scale").addEventListener("input", e => { st.scale = +e.target.value; render(); });
+  $("revOff").addEventListener("click", () => { st.rev = false; render(); });
+  $("revOn").addEventListener("click", () => { st.rev = true; render(); });
+  $("ghost").addEventListener("change", render);
+  $("mid").addEventListener("change", render);
+  $("reset").addEventListener("click", () => {
+    st.shift = 0; st.scale = 1; st.rev = false;
+    $("shift").value = 0; $("scale").value = 1; render();
+  });
+  window.addEventListener("resize", render);
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", render);
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+  render();
+})();
+</script>
+
+</body></html>
