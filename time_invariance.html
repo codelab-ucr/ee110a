@@ -1,0 +1,481 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Time Invariance Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control strip, equation strip, two plots (input | both path outputs overlaid), verdict, then one row of three stages per path */
+:root {
+  --bg: #f4f6f8; --panel: #ffffff; --ink: #18212b; --muted: #5a6877; --line: #d9dfe6;
+  --grid: #e9edf2; --axis: #7d8a98; --orig: #1d5fa8; --xf: #c9481b; --ghost: #9aa7b5; --accent-soft: #fbe9e1;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --panel: #182029; --ink: #e6ebf0; --muted: #9aa7b5; --line: #2a3542;
+    --grid: #202a35; --axis: #6f7e8e; --orig: #6aa8f0; --xf: #f08a5d; --ghost: #5d6b7a;
+    --accent-soft: #3a2219; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --panel: #182029; --ink: #e6ebf0; --muted: #9aa7b5; --line: #2a3542;
+  --grid: #202a35; --axis: #6f7e8e; --orig: #6aa8f0; --xf: #f08a5d; --ghost: #5d6b7a;
+  --accent-soft: #3a2219; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 24px 40px; display: flex; flex-direction: column; gap: 18px; }
+header h1 { margin: 0; font-size: 1.6rem; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 20px; flex-wrap: wrap; }
+.top > div:first-child { min-width: 0; flex: 1 1 320px; }
+
+.controls { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 24px; }
+.ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ctl > label, .lbl { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+.row { display: flex; align-items: center; gap: 10px; }
+select, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; }
+select { width: 100%; }
+button { cursor: pointer; }
+button:hover { border-color: var(--axis); }
+:focus-visible { outline: 2px solid var(--orig); outline-offset: 2px; }
+input[type=range] { flex: 1; min-width: 0; accent-color: var(--xf); }
+.val { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 5.5ch; text-align: right; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 7px 14px; }
+.seg button[aria-pressed="true"] { background: var(--xf); color: #fff; }
+.theme { background: var(--panel); flex: none; }
+.theme button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.check { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+
+.eq { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eq .main { font-size: 1.15rem; }
+.eq .path { font-size: 0.98rem; display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.eq .who { color: var(--muted); min-width: 22ch; }
+.eq .p1 { color: var(--xf); font-weight: 500; }
+.eq .p2 { color: var(--ink); font-weight: 500; }
+.eq span { overflow-wrap: anywhere; min-width: 0; }
+
+.plots { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .plots { grid-template-columns: 1fr; } }
+.plot { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 12px 8px; min-width: 0; }
+.plot h2 { margin: 0 0 6px; font-size: 1rem; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.plot h2 .fn { font-family: var(--font-mono); font-weight: 500; }
+.plot.o h2 .fn { color: var(--orig); }
+.plot.t h2 .fn { color: var(--xf); }
+canvas { width: 100%; aspect-ratio: 4 / 3; max-width: 100%; display: block; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); padding: 4px 4px 0; }
+.sw { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+.sw.box { height: 10px; border: 0; background: var(--accent-soft); }
+
+.verdict { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.verdict p { margin: 0; flex: 1 1 320px; min-width: 0; max-width: 85ch; }
+.pill { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.06em; border-radius: 999px; padding: 3px 12px; border: 1px solid var(--line); flex: none; }
+.pill.differ { background: var(--xf); color: #fff; border-color: var(--xf); }
+.pill.match { background: var(--accent-soft); color: var(--ink); }
+.pill.trap { border: 1px dashed var(--xf); color: var(--xf); }
+.verdict .ask { display: flex; gap: 8px; flex-wrap: wrap; }
+.verdict .ask button { background: var(--panel); border-color: var(--axis); font-weight: 700; }
+
+.note { font-size: 0.88rem; color: var(--muted); max-width: 85ch; margin: 0; }
+
+.seq { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 22px; }
+.seq > h2 { margin: 0; font-size: 1.15rem; }
+.seq > p { margin: -14px 0 0; color: var(--muted); font-size: 0.9rem; max-width: 80ch; }
+.order h3 { margin: 0 0 10px; font-size: 1rem; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.order h3 .tag { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 620px) { .steps { grid-template-columns: minmax(0, 1fr); } .step canvas { max-width: 340px; } }
+.step { border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 4px; min-width: 0; background: var(--bg); }
+.step .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+.step .op { font-size: 0.88rem; min-height: 2.8em; }
+.step .op .sub { font-family: var(--font-mono); color: var(--muted); }
+.step .ex { font-family: var(--font-mono); font-size: 0.85rem; overflow-wrap: anywhere; min-height: 2.6em; }
+.step.in .ex { color: var(--orig); }
+.step.out .ex { color: var(--xf); }
+.step.skip { opacity: 0.55; }
+.ok { font-size: 0.78rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; align-self: flex-start; }
+.ok.a { color: var(--xf); background: var(--accent-soft); }
+.ok.b { color: var(--ink); border: 1px dashed var(--axis); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Time Invariance Demo</h1>
+      <p>Pick a signal and a system. Shift the input and then apply the system, or apply the system and then shift the output. If the two results always agree, the system is time-invariant.</p>
+    </div>
+    <div class="seg theme" role="group" aria-label="Color theme">
+      <button data-th="system" aria-pressed="true">System</button>
+      <button data-th="light" aria-pressed="false">Light</button>
+      <button data-th="dark" aria-pressed="false">Dark</button>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="ctl">
+      <label for="sig">Signal x(t)</label>
+      <select id="sig">
+        <option value="box">Box (0 ≤ t &lt; 1)</option>
+        <option value="tri">Triangle (0 ≤ t ≤ 2)</option>
+        <option value="step">Unit step u(t)</option>
+        <option value="exp">Decaying exponential e^(−t)·u(t)</option>
+        <option value="sin">Sinusoid sin(πt)</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label for="sys">System y(t) = T{x(t)}</label>
+      <select id="sys">
+        <option value="gain">Gain: 2·x(t)</option>
+        <option value="sq">Squarer: x(t)²</option>
+        <option value="delay">Delay: x(t − 1)</option>
+        <option value="avg">Moving average: ∫ x(τ) dτ over [t − 1, t]</option>
+        <option value="tx">Time-weighted gain: t·x(t)</option>
+        <option value="cos">Modulator: cos(2πt)·x(t)</option>
+        <option value="flip">Time reversal: x(−t)</option>
+        <option value="scale">Time compression: x(2t)</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label for="shift">Time shift t₀</label>
+      <div class="row"><input id="shift" type="range" min="-3" max="3" step="0.25" value="2"><span class="val" id="shiftV"></span></div>
+    </div>
+    <div class="ctl">
+      <span class="lbl" id="prL">Predict before reveal</span>
+      <div class="row" style="justify-content: space-between; flex-wrap: wrap;">
+        <div class="seg" role="group" aria-labelledby="prL">
+          <button id="prOff" aria-pressed="true">Off</button>
+          <button id="prOn" aria-pressed="false">On</button>
+        </div>
+        <button id="reset">Reset</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <span class="lbl">Overlays</span>
+      <label class="check"><input type="checkbox" id="ghost" checked> y(t) before the shift (faint)</label>
+      <label class="check"><input type="checkbox" id="fill" checked> Shade the gap between paths</label>
+    </div>
+  </section>
+
+  <section class="eq" aria-live="polite">
+    <span class="main" id="eqMain"></span>
+    <div class="path"><span class="who" id="who1"></span><span class="p1" id="eq1"></span></div>
+    <div class="path"><span class="who" id="who2"></span><span class="p2" id="eq2"></span></div>
+  </section>
+
+  <section class="plots">
+    <div class="plot o">
+      <h2><span>Input</span><span class="fn" id="lblO"></span></h2>
+      <canvas id="cO" aria-label="Plot of the input and the shifted input"></canvas>
+      <div class="legend">
+        <span><span class="sw" style="border-color:var(--orig)"></span>x(t)</span>
+        <span><span class="sw" style="border-color:var(--orig);border-top-style:dashed"></span><span id="lgS"></span></span>
+      </div>
+    </div>
+    <div class="plot t">
+      <h2><span>Outputs of the two paths</span><span class="fn" id="lblT"></span></h2>
+      <canvas id="cT" aria-label="Plot of the two path outputs"></canvas>
+      <div class="legend">
+        <span><span class="sw" style="border-color:var(--xf)"></span>Path 1: shift, then system</span>
+        <span><span class="sw" style="border-color:var(--ink);border-top-style:dashed"></span>Path 2: system, then shift</span>
+        <span id="lgG"><span class="sw" style="border-color:var(--ghost);border-top-style:dotted"></span>y(t)</span>
+        <span id="lgF"><span class="sw box"></span>gap</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+  <p class="note">Convention: a positive t₀ is a delay, so shifting replaces t with t − t₀ and moves the plot right. Shifting the <em>output</em> means replacing every t in y(t), including any t that sits outside x(·). One mismatch proves a system is time-varying. A match for one signal and one shift proves nothing on its own: time invariance needs a match for every input and every shift.</p>
+
+  <section class="seq" aria-label="The two paths, step by step">
+    <h2>The two paths, step by step</h2>
+    <p>Both paths start from the same x(t) and use the same two operations. Only the order changes.</p>
+    <div class="order">
+      <h3>Path 1: shift → system <span class="tag" id="tag1"></span></h3>
+      <div class="steps" id="steps1"></div>
+    </div>
+    <div class="order">
+      <h3>Path 2: system → shift <span class="tag" id="tag2"></span></h3>
+      <div class="steps" id="steps2"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const T0 = -5, T1 = 5;
+  const $ = id => document.getElementById(id);
+  const fmt = v => (+v.toFixed(3)).toString();
+  const sgn = v => v < 0 ? "− " + fmt(-v) : "+ " + fmt(v);
+  // "at + b" as text
+  const lin = (al, be) => (al === 1 ? "t" : al === -1 ? "−t" : (al < 0 ? "−" : "") + fmt(Math.abs(al)) + "t") + (be === 0 ? "" : " " + sgn(be));
+
+  const SIG = {
+    box:  { f: t => (t >= 0 && t < 1) ? 1 : 0 },
+    tri:  { f: t => Math.max(0, 1 - Math.abs(t - 1)) },
+    step: { f: t => t >= 0 ? 1 : 0 },
+    exp:  { f: t => t >= 0 ? Math.exp(-t) : 0 },
+    sin:  { f: t => Math.sin(Math.PI * t) },
+  };
+
+  // op: maps an input function to an output function. p1/p2: text for each path, given shift d and "t − d" string s.
+  const SYS = {
+    gain: { ti: true, def: "2·x(t)", op: f => t => 2 * f(t),
+      p1: (d, s) => `2·x(${s})`, p2: (d, s) => `2·x(${s})`,
+      why: "The rule only uses the input's value at the same instant. It never reads the clock." },
+    sq: { ti: true, def: "x(t)²", op: f => t => f(t) * f(t),
+      p1: (d, s) => `x(${s})²`, p2: (d, s) => `x(${s})²`,
+      why: "Squaring is nonlinear, but it still only uses the input's value, not the time. Linear and time-invariant are separate properties." },
+    delay: { ti: true, def: "x(t − 1)", op: f => t => f(t - 1),
+      p1: d => `x(${lin(1, -d - 1)})`, p2: d => `x(${lin(1, -1 - d)})`,
+      why: "Two delays add up to the same total in either order." },
+    avg: { ti: true, def: "∫[t − 1, t] x(τ) dτ",
+      op: f => t => { let s = 0; for (let k = 0; k < 64; k++) s += f(t - 1 + (k + 0.5) / 64); return s / 64; },
+      p1: d => `∫[t − 1, t] x(${d === 0 ? "τ" : "τ " + sgn(-d)}) dτ`,
+      p2: d => `∫[${lin(1, -d - 1)}, ${lin(1, -d)}] x(τ) dτ`,
+      why: "The window is tied to t, so it slides along with the signal. The two integrals are the same after the substitution τ → τ + t₀." },
+    tx: { ti: false, def: "t·x(t)", op: f => t => t * f(t),
+      p1: (d, s) => `t·x(${s})`, p2: (d, s) => d === 0 ? "t·x(t)" : `(${s})·x(${s})`,
+      why: "The gain t reads the clock. Shifting the input moves x, but the gain stays where it was." },
+    cos: { ti: false, def: "cos(2πt)·x(t)", op: f => t => Math.cos(2 * Math.PI * t) * f(t),
+      p1: (d, s) => `cos(2πt)·x(${s})`, p2: (d, s) => d === 0 ? "cos(2πt)·x(t)" : `cos(2π(${s}))·x(${s})`,
+      why: "The carrier cos(2πt) is fixed to the clock. It has period 1, so a whole-number shift lines it up again and hides the problem." },
+    flip: { ti: false, def: "x(−t)", op: f => t => f(-t),
+      p1: d => `x(${lin(-1, -d)})`, p2: d => `x(${lin(-1, d)})`,
+      why: "Flipping about t = 0 turns a right shift of the input into a left shift of the output." },
+    scale: { ti: false, def: "x(2t)", op: f => t => f(2 * t),
+      p1: d => `x(${lin(2, -d)})`, p2: d => `x(${lin(2, -2 * d)})`,
+      why: "Compressing about t = 0 also halves the shift. The output moves by t₀/2, not t₀." },
+  };
+
+  const DEF = { sig: "box", sys: "tx", shift: 2 };
+  const st = { ...DEF, predict: false, revealed: false, guess: null };
+
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function setupCanvas(c) {
+    const dpr = window.devicePixelRatio || 1;
+    const r = c.getBoundingClientRect();
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    const ctx = c.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, w: r.width, h: r.height };
+  }
+
+  // yr: {lo, hi, step}. o: {marks, fill:[fa, fb], N, msg}
+  function drawPlot(c, yr, curves, o = {}) {
+    const { ctx, w, h } = setupCanvas(c);
+    if (!w) return;
+    const pad = { l: 34, r: 10, t: 10, b: 26 };
+    const X = t => pad.l + (t - T0) / (T1 - T0) * (w - pad.l - pad.r);
+    const Y = v => pad.t + (yr.hi - v) / (yr.hi - yr.lo) * (h - pad.t - pad.b);
+    const N = o.N || 2400;
+    ctx.clearRect(0, 0, w, h);
+    ctx.font = "11px " + css("--font-mono");
+    const ticks = [];
+    for (let v = Math.ceil(yr.lo / yr.step) * yr.step; v <= yr.hi + 1e-9; v += yr.step) ticks.push(+v.toFixed(3));
+    ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1;
+    for (let t = T0; t <= T1; t += 0.5) { ctx.beginPath(); ctx.moveTo(X(t), pad.t); ctx.lineTo(X(t), h - pad.b); ctx.stroke(); }
+    ticks.forEach(v => { ctx.beginPath(); ctx.moveTo(pad.l, Y(v)); ctx.lineTo(w - pad.r, Y(v)); ctx.stroke(); });
+    ctx.strokeStyle = css("--axis"); ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(pad.l, Y(0)); ctx.lineTo(w - pad.r, Y(0)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X(0), pad.t); ctx.lineTo(X(0), h - pad.b); ctx.stroke();
+    ctx.fillStyle = css("--muted");
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    const lblStep = w < 280 ? 2 : 1;
+    for (let t = T0 + (lblStep === 2 ? 1 : 0); t <= T1; t += lblStep) ctx.fillText(t, X(t), h - pad.b + 6);
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    const yLblStep = (h < 200 && ticks.length > 7) ? 2 : 1;
+    ticks.forEach(v => { if (v !== 0 && Math.round(v / yr.step) % yLblStep === 0) ctx.fillText(v, pad.l - 5, Y(v)); });
+    ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+    ctx.fillText("t", w - pad.r, Y(0) - 3);
+
+    ctx.save(); ctx.beginPath(); ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b); ctx.clip();
+    if (o.fill) {
+      const M = 600, [fa, fb] = o.fill;
+      ctx.fillStyle = css("--accent-soft");
+      ctx.beginPath();
+      for (let i = 0; i <= M; i++) { const t = T0 + (T1 - T0) * i / M; ctx[i ? "lineTo" : "moveTo"](X(t), Y(fa(t))); }
+      for (let i = M; i >= 0; i--) { const t = T0 + (T1 - T0) * i / M; ctx.lineTo(X(t), Y(fb(t))); }
+      ctx.closePath(); ctx.fill();
+    }
+    curves.forEach(cv => {
+      const jumpTol = 0.08 * (yr.hi - yr.lo);
+      ctx.strokeStyle = cv.color; ctx.lineWidth = cv.width; ctx.setLineDash(cv.dash || []);
+      ctx.lineJoin = "round";
+      let prev = null;
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) {
+        const t = T0 + (T1 - T0) * i / N, v = cv.f(t);
+        if (prev !== null && Math.abs(v - prev) > jumpTol && Math.abs(v - prev) / ((T1 - T0) / N) > 40) {
+          ctx.stroke();
+          ctx.save(); ctx.setLineDash([3, 3]); ctx.lineWidth = 1; ctx.globalAlpha = 0.7;
+          ctx.beginPath(); ctx.moveTo(X(t), Y(prev)); ctx.lineTo(X(t), Y(v)); ctx.stroke(); ctx.restore();
+          ctx.beginPath(); ctx.moveTo(X(t), Y(v));
+        } else if (i === 0) ctx.moveTo(X(t), Y(v));
+        else ctx.lineTo(X(t), Y(v));
+        prev = v;
+      }
+      ctx.stroke();
+    });
+    ctx.restore(); ctx.setLineDash([]);
+
+    (o.marks || []).forEach(m => {
+      if (m.t < T0 || m.t > T1) return;
+      ctx.fillStyle = m.color;
+      ctx.beginPath(); ctx.arc(X(m.t), Y(0), 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.font = "500 11px " + css("--font-mono");
+      ctx.fillText(m.label, X(m.t), Y(0) + 6);
+    });
+    if (o.msg) {
+      ctx.fillStyle = css("--muted"); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = (w < 280 ? "13px " : "15px ") + css("--font-body");
+      ctx.fillText(o.msg, pad.l + (w - pad.l - pad.r) / 2, pad.t + (h - pad.t - pad.b) * 0.3);
+    }
+  }
+
+  function shiftText(d) {
+    if (d === 0) return { op: "No shift (t₀ = 0)", sub: "" };
+    return { op: `Shift ${d > 0 ? "right" : "left"} by ${fmt(Math.abs(d))}`, sub: `t → t ${sgn(-d)}` };
+  }
+
+  function render() {
+    const x = SIG[st.sig].f, sys = SYS[st.sys], d = st.shift;
+    const s = lin(1, -d);
+    const xs = t => x(t - d);
+    const y = sys.op(x);
+    const z1 = sys.op(xs);          // shift, then system
+    const z2 = t => y(t - d);       // system, then shift
+
+    // shared y range and largest gap between the paths
+    let mn = 0, mx = 0, gap = 0;
+    for (let i = 0; i <= 1200; i++) {
+      const t = T0 + (T1 - T0) * i / 1200, a = z1(t), b = z2(t);
+      mn = Math.min(mn, x(t), xs(t), y(t), a, b); mx = Math.max(mx, x(t), xs(t), y(t), a, b);
+      gap = Math.max(gap, Math.abs(a - b));
+    }
+    const lo = Math.min(-0.5, Math.floor((mn - 0.2) * 2) / 2), hi = Math.max(1.5, Math.ceil((mx + 0.2) * 2) / 2);
+    const span = hi - lo, yr = { lo, hi, step: span <= 4 ? 0.5 : span <= 8 ? 1 : 2 };
+    const match = gap < 1e-6;
+    const hidden = st.predict && !st.revealed && d !== 0;
+
+    $("shiftV").textContent = (d > 0 ? "+" : d < 0 ? "−" : "") + fmt(Math.abs(d));
+    $("prOff").setAttribute("aria-pressed", String(!st.predict));
+    $("prOn").setAttribute("aria-pressed", String(st.predict));
+
+    const e1 = sys.p1(d, s), e2 = sys.p2(d, s);
+    $("eqMain").textContent = `y(t) = T{x(t)} = ${sys.def}`;
+    $("who1").textContent = `Path 1: T{x(${s})} =`;
+    $("who2").textContent = `Path 2: y(${s}) =`;
+    $("eq1").textContent = hidden ? "?" : e1;
+    $("eq2").textContent = hidden ? "?" : e2;
+    $("lblO").textContent = `x(t), x(${s})`;
+    $("lblT").textContent = hidden ? "?" : (match ? "same curve" : "different curves");
+    $("lgS").textContent = `x(${s})`;
+
+    const cO = css("--orig"), cX = css("--xf"), cG = css("--ghost"), cI = css("--ink");
+    drawPlot($("cO"), yr, [{ f: x, color: cO, width: 2.5 }, { f: xs, color: cO, width: 2, dash: [6, 4] }],
+      { marks: d === 0 ? [] : [{ t: 0, label: "0", color: cO }, { t: d, label: "t₀", color: cO }] });
+
+    const showG = $("ghost").checked, showF = $("fill").checked && !match && !hidden;
+    const curves = [];
+    if (showG) curves.push({ f: y, color: cG, width: 1.6, dash: [2, 3] });
+    if (!hidden) { curves.push({ f: z1, color: cX, width: 3 }); curves.push({ f: z2, color: cI, width: 1.8, dash: [6, 4] }); }
+    $("lgG").hidden = !showG; $("lgF").hidden = !showF;
+    drawPlot($("cT"), yr, curves, { fill: showF ? [z1, z2] : null, msg: hidden ? "Make your prediction below" : "" });
+
+    // verdict
+    const v = $("verdict");
+    if (d === 0) {
+      v.innerHTML = `<span class="pill">NO SHIFT</span><p>Set a non-zero shift t₀ to run the test. With t₀ = 0 both paths are the same thing.</p>`;
+    } else if (hidden) {
+      v.innerHTML = `<p><strong>Before you look:</strong> will Path 1 and Path 2 give the same output for this signal and this shift?</p>
+        <div class="ask"><button data-g="match">They match</button><button data-g="differ">They differ</button></div>`;
+    } else {
+      const g = st.guess ? (st.guess === (match ? "match" : "differ")
+        ? " <strong>Your prediction was right.</strong>"
+        : " <strong>Not what you predicted.</strong> Compare step 2 of each path below.") : "";
+      if (!match) {
+        v.innerHTML = `<span class="pill differ">OUTPUTS DIFFER</span><p>This system is <strong>time-varying</strong>. One mismatch is enough to prove it. ${sys.why}${g}</p>`;
+      } else if (sys.ti) {
+        v.innerHTML = `<span class="pill match">OUTPUTS MATCH</span><p>This system is <strong>time-invariant</strong>: the paths agree for every signal and every shift, not only this one. ${sys.why}${g}</p>`;
+      } else {
+        v.innerHTML = `<span class="pill trap">MATCH, BUT A TRAP</span><p>The outputs agree here, yet this system is <strong>time-varying</strong>. This signal and shift happen to hide it. Change t₀ or the signal to find a mismatch. ${sys.why}${g}</p>`;
+      }
+    }
+
+    // step-by-step
+    const sh = shiftText(d);
+    const sub = t => t.sub ? `<br><span class="sub">${t.sub}</span>` : "";
+    const P1 = [
+      { k: "Start", cls: "in", op: "Input signal", ex: "x(t)", cv: { f: x, color: cO, width: 2.2 } },
+      { k: "1 · Shift", cls: "in" + (d === 0 ? " skip" : ""), op: sh.op + sub(sh), ex: `v(t) = x(${s})`, cv: { f: xs, color: cO, width: 2.2 } },
+      { k: "2 · System", cls: "out", op: `Apply the system to v(t)<br><span class="sub">y = ${sys.def}, with x → v</span>`, ex: `T{v(t)} = ${e1}`,
+        cv: { f: z1, color: cX, width: 2.4 }, last: `<span class="ok a">Path 1 output</span>` },
+    ];
+    const P2 = [
+      { k: "Start", cls: "in", op: "Input signal", ex: "x(t)", cv: { f: x, color: cO, width: 2.2 } },
+      { k: "1 · System", cls: "out", op: "Apply the system to x(t)", ex: `y(t) = ${sys.def}`, cv: { f: y, color: cX, width: 2.2 } },
+      { k: "2 · Shift", cls: d === 0 ? "skip" : "", op: sh.op + (sh.sub ? `<br><span class="sub">${sh.sub} in every t of y(t)</span>` : ""), ex: `y(${s}) = ${e2}`,
+        cv: { f: z2, color: cI, width: 1.8, dash: [6, 4] }, last: `<span class="ok b">Path 2 output</span>` },
+    ];
+    $("tag1").textContent = `T{x(${s})}`;
+    $("tag2").textContent = `y(${s})`;
+    [["steps1", P1], ["steps2", P2]].forEach(([id, stages]) => {
+      const host = $(id);
+      host.innerHTML = stages.map(g => {
+        const hide = hidden && g.last;
+        return `<div class="step ${g.cls}">
+          <span class="k">${g.k}</span>
+          <span class="op">${g.op}</span>
+          <span class="ex">${hide ? g.ex.split(" = ")[0] + " = ?" : g.ex}</span>
+          <canvas aria-label="${g.k}"></canvas>
+          ${g.last || ""}
+        </div>`;
+      }).join("");
+      host.querySelectorAll("canvas").forEach((cv, i) => {
+        const g = stages[i], hide = hidden && g.last;
+        drawPlot(cv, yr, hide ? [] : [g.cv], { N: 800, msg: hide ? "Predict first" : "" });
+      });
+    });
+  }
+
+  function changed() { st.revealed = false; st.guess = null; render(); }
+
+  function applyTheme(th) {
+    const r = document.documentElement;
+    if (th === "system") r.removeAttribute("data-theme"); else r.setAttribute("data-theme", th);
+    document.querySelectorAll(".theme button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.th === th)));
+    try { localStorage.setItem("sig-theme", th); } catch (e) {}
+  }
+  document.querySelectorAll(".theme button").forEach(b => b.addEventListener("click", () => applyTheme(b.dataset.th)));
+  try { const saved = localStorage.getItem("sig-theme"); if (saved) applyTheme(saved); } catch (e) {}
+
+  $("sig").value = st.sig; $("sys").value = st.sys; $("shift").value = st.shift;
+  $("sig").addEventListener("change", e => { st.sig = e.target.value; changed(); });
+  $("sys").addEventListener("change", e => { st.sys = e.target.value; changed(); });
+  $("shift").addEventListener("input", e => { st.shift = +e.target.value; changed(); });
+  $("prOff").addEventListener("click", () => { st.predict = false; changed(); });
+  $("prOn").addEventListener("click", () => { st.predict = true; changed(); });
+  $("ghost").addEventListener("change", render);
+  $("fill").addEventListener("change", render);
+  $("verdict").addEventListener("click", e => {
+    const b = e.target.closest("button[data-g]");
+    if (!b) return;
+    st.guess = b.dataset.g; st.revealed = true; render();
+  });
+  $("reset").addEventListener("click", () => {
+    Object.assign(st, DEF);
+    $("sig").value = st.sig; $("sys").value = st.sys; $("shift").value = st.shift;
+    changed();
+  });
+  window.addEventListener("resize", render);
+  if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", render);
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+  render();
+})();
+</script>
+
+</body></html>

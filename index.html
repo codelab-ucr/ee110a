@@ -98,24 +98,45 @@ footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--li
       url: "basic_transformations.html",
       thumb: "transform",
     },
+    {
+      title: "Time Invariance Test",
+      desc: "Check whether a system is time-invariant. Shift the input then apply the system, or apply the system then shift the output, and see whether the two results agree.",
+      tags: ["T{x(t − t₀)}", "y(t − t₀)", "t·x(t)"],
+      url: "time_invariance.html",
+      thumb: "tinv",
+    },
   ];
 
-  // Small preview: box x(t) and its transform x(-2(t-1))
-  function thumb() {
-    const W = 200, H = 110, X = t => 10 + (t + 2.5) / 5 * (W - 20), Y = v => H - 22 - v * 60;
+  const W = 200, H = 110, X = t => 10 + (t + 2.5) / 5 * (W - 20);
+  function frame(Y, inner) {
     let g = "";
     for (let t = -2; t <= 2; t++) g += `<line x1="${X(t)}" y1="10" x2="${X(t)}" y2="${H - 22}" stroke="var(--grid)"/>`;
     return `<svg class="thumb" viewBox="0 0 ${W} ${H}" aria-hidden="true">
       ${g}
       <line x1="10" y1="${Y(0)}" x2="${W - 10}" y2="${Y(0)}" stroke="var(--axis)"/>
       <line x1="${X(0)}" y1="10" x2="${X(0)}" y2="${H - 22}" stroke="var(--axis)"/>
-      <polyline fill="none" stroke="var(--orig)" stroke-width="2" stroke-dasharray="5 4"
-        points="${X(-2.5)},${Y(0)} ${X(0)},${Y(0)} ${X(0)},${Y(1)} ${X(1)},${Y(1)} ${X(1)},${Y(0)} ${X(2.5)},${Y(0)}"/>
-      <polyline fill="none" stroke="var(--xf)" stroke-width="2.6"
-        points="${X(-2.5)},${Y(0)} ${X(0.5)},${Y(0)} ${X(0.5)},${Y(1)} ${X(1)},${Y(1)} ${X(1)},${Y(0)} ${X(2.5)},${Y(0)}"/>
+      ${inner}
       ${[-2, -1, 0, 1, 2].map(t => `<text x="${X(t)}" y="${H - 6}" text-anchor="middle" font-size="10" font-family="IBM Plex Mono, monospace" fill="var(--muted)">${t}</text>`).join("")}
     </svg>`;
   }
+  const THUMBS = {
+    // box x(t) and its transform x(-2(t-1))
+    transform() {
+      const Y = v => H - 22 - v * 60;
+      return frame(Y, `<polyline fill="none" stroke="var(--orig)" stroke-width="2" stroke-dasharray="5 4"
+        points="${X(-2.5)},${Y(0)} ${X(0)},${Y(0)} ${X(0)},${Y(1)} ${X(1)},${Y(1)} ${X(1)},${Y(0)} ${X(2.5)},${Y(0)}"/>
+      <polyline fill="none" stroke="var(--xf)" stroke-width="2.6"
+        points="${X(-2.5)},${Y(0)} ${X(0.5)},${Y(0)} ${X(0.5)},${Y(1)} ${X(1)},${Y(1)} ${X(1)},${Y(0)} ${X(2.5)},${Y(0)}"/>`);
+    },
+    // t·x(t) with a box shifted by 1: t·x(t−1) (solid) vs (t−1)·x(t−1) (dashed)
+    tinv() {
+      const Y = v => H - 22 - v * 34;
+      return frame(Y, `<polyline fill="none" stroke="var(--xf)" stroke-width="2.6"
+        points="${X(-2.5)},${Y(0)} ${X(1)},${Y(0)} ${X(1)},${Y(1)} ${X(2)},${Y(2)} ${X(2)},${Y(0)} ${X(2.5)},${Y(0)}"/>
+      <polyline fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="5 4"
+        points="${X(-2.5)},${Y(0)} ${X(1)},${Y(0)} ${X(2)},${Y(1)} ${X(2)},${Y(0)} ${X(2.5)},${Y(0)}"/>`);
+    },
+  };
 
   const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   document.getElementById("list").innerHTML = APPLETS.map((a, i) => `
@@ -127,7 +148,7 @@ footer { color: var(--muted); font-size: 0.88rem; border-top: 1px solid var(--li
         <div class="tags">${a.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>
         <span class="go">Open applet →</span>
       </div>
-      ${a.thumb === "transform" ? thumb() : ""}
+      ${THUMBS[a.thumb] ? THUMBS[a.thumb]() : ""}
     </a></li>`).join("");
   document.getElementById("count").textContent = APPLETS.length + (APPLETS.length === 1 ? " applet" : " applets");
 
